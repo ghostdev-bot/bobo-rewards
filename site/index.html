@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; connect-src 'self' https:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>Bobo Rewards · holder rewards tracker for $BOBO and its pairs (unofficial)</title>
+<meta name="description" content="Unofficial community tool: paste a Solana wallet and see the pump.fun holder rewards it received from $BOBO (paid in SOL) and BOBO pairs like $GRR and $STORMIE (paid in BOBO), straight from on-chain data.">
+<meta property="og:title" content="Bobo Rewards (unofficial)">
+<meta property="og:description" content="How much honey did the bear send you? Holder rewards for $BOBO, $GRR, $STORMIE and other BOBO pairs, read from Solana.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#070707">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="BOBO Rewards">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icons/favicon-32.png">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="top"><div class="wrap">
+  <a class="brand" href="#/"><img src="img/icons/icon-192.png" alt="" width="34" height="34"><span>BOBO<b>REWARDS</b></span><em class="unoff">unofficial</em></a>
+  <div class="navr">
+    <a href="#wallet" class="nl">Wallet</a>
+    <a href="#overview" class="nl">Overview</a>
+    <a href="#how" class="nl">How it works</a>
+    <button id="btnInstall" class="installBtn hidden" type="button">Install app</button>
+    <button id="btnSettings" class="icon" title="Data settings" aria-label="Data settings">⚙</button>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <img class="logo" src="img/bear.jpg" alt="Bobo the Bear (@bobocouncil avatar)" width="132" height="132">
+  <p class="kicker">For the bobros · Bear Council community tool</p>
+  <h1>How much honey did the bear send you?</h1>
+  <p class="sub">$BOBO is a pump.fun <b>holder rewards</b> coin: its creator fee is paid out to holders in <b>SOL</b>. BOBO pairs like <b>$GRR</b> and <b>$STORMIE</b> do the same, paid in <b>BOBO</b>. Paste a wallet to see what it received, read directly from Solana.</p>
+  <form id="f" class="search" autocomplete="off">
+    <input id="addr" type="text" inputmode="text" spellcheck="false" placeholder="Paste a Solana wallet address" aria-label="Solana wallet address">
+    <button type="submit" class="btn pri" id="btnGo">Check rewards</button>
+  </form>
+  <div class="row2">
+    <button type="button" id="btnWallet" class="btn ghost">Use my wallet (read-only)</button>
+    <button type="button" id="btnExample" class="btn link">Try an example holder</button>
+  </div>
+  <p class="fine">Read-only. Nothing to sign, no transactions. Shows your <b>lifetime</b> holder-reward payouts. Your address is only sent to Solana RPC (Helius, with public fallbacks) and price APIs.</p>
+</div></header>
+
+<main class="wrap">
+  <section id="wallet" class="sec hidden">
+    <div class="secHead">
+      <div><h2>Wallet <code id="wAddr"></code></h2><p class="muted" id="wLinks"></p></div>
+      <button class="btn ghost sm" id="btnRefresh">Refresh</button>
+    </div>
+    <div id="prog" class="prog hidden"><div class="bar"><i id="progBar"></i></div><span id="progTxt"></span><button class="btn link sm hidden" id="btnMore">Scan more</button></div>
+    <div id="winNote" class="note"></div>
+    <div class="cards" id="sumCards"></div>
+    <h3 class="h3">Per token</h3>
+    <div class="tokGrid" id="tokCards"></div>
+    <h3 class="h3">Reward payouts <span class="muted sm" id="payCount"></span> <button class="btn link sm hidden" id="btnCsv">Download CSV</button></h3>
+    <div class="tblWrap"><table class="tbl" id="payTbl"><thead><tr><th>Time</th><th>From holding</th><th class="r">Received</th><th class="r">USD <span class="est">today's price</span></th><th>Tx</th></tr></thead><tbody id="payRows"></tbody></table></div>
+    <p class="muted sm" id="payEmpty"></p>
+  </section>
+
+  <section id="overview" class="sec">
+    <div class="secHead">
+      <div><h2>Overview: BOBO and its pairs</h2><p class="muted">Live prices from DexScreener. Lifetime distribution totals are counted from every payout event of each coin's pump.fun holder-rewards vault.</p></div>
+      <button class="btn ghost sm" id="btnMeasure">Measure payouts</button>
+    </div>
+    <div class="tblWrap"><table class="tbl ov" id="ovTbl"><thead><tr><th>Token</th><th class="r">Price</th><th class="r">Market cap</th><th class="r">24h vol</th><th>Paid in</th><th class="r">Distributed · lifetime</th><th class="r">Avg per day</th><th>Last payout</th></tr></thead><tbody id="ovRows"></tbody></table></div>
+    <p class="muted sm" id="ovNote"></p>
+  </section>
+
+  <section id="how" class="sec how">
+    <h2>How it works (and how it's measured)</h2>
+    <div class="howGrid">
+      <div class="hcard"><h4>1 · Holder rewards coins</h4><p>On pump.fun a coin can route its creator fee to holders instead of a creator. The fee accrues in a per-coin vault (PDA <code>["holder-rewards", mint]</code> of the pump program) and pump.fun's distributor (<code>HckQ93…Zg9t</code>) pays it out several times a day with the <code>distribute_fee_to_holders</code> instruction, pro rata to wallets holding at least about $20 of the coin. Payouts are in the coin's quote asset.</p></div>
+      <div class="hcard"><h4>2 · BOBO and its pairs</h4><p><b>$BOBO</b> trades against SOL, so BOBO holders get <b>SOL</b>. Pairs are coins launched on pump.fun with BOBO as the quote asset (a "custom pair"), so their holders get <b>BOBO</b>: $GRR (Smol Grr) and $STORMIE run a 3% rate. $GRRL is paired to GRR and pays in GRR. 20% of GRR supply sits at the BoboBurn address, so part of GRR's BOBO rewards flows there.</p></div>
+      <div class="hcard"><h4>3 · What this site reads</h4><p>Your wallet's full transaction history since holder rewards launched (Helius archive RPC), keeping only transactions where pump.fun's program runs <code>DistributeFeeToHolders</code>. The coin is the instruction's <code>mint</code> account, and the amount is your wallet's SOL or token balance change in that transaction. Results are cached in your browser, so the next visit only fetches what's new. Balances come from Jupiter (or Helius), prices from DexScreener and Jupiter.</p></div>
+      <div class="hcard warn"><h4>4 · Limits, honestly</h4><p>USD values use <b>today's</b> price, not the price at payout time. The “above ~$20 minimum” tag is an estimate from your current balance. Very active wallets are read in chunks of 5,000 transactions (“Scan more” continues). If Helius is unavailable the page falls back to free public RPCs, which only keep about the last 1.5 days, and says so.</p></div>
+    </div>
+    <p class="muted sm">Sources: <a href="https://pump.fun/docs/fees" target="_blank" rel="noopener">pump.fun fees docs</a> · <a href="https://github.com/pump-fun/pump-public-docs/blob/main/docs/HOLDER_REWARDS_README.md" target="_blank" rel="noopener">pump.fun holder rewards README</a> · <a href="https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump.json" target="_blank" rel="noopener">pump program IDL</a> · <a href="https://x.com/smol_grr/status/2113384843849416767" target="_blank" rel="noopener">@smol_grr on the BoboBurn address</a> · <a href="https://www.bobothebear.io/" target="_blank" rel="noopener">bobothebear.io</a></p>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" class="dlgIn">
+    <h3>Data settings</h3>
+    <label>Custom RPC URL (optional)
+      <input id="rpcIn" type="url" placeholder="https://mainnet.helius-rpc.com/?api-key=…">
+    </label>
+    <p class="muted sm">Only used if the built-in Helius connection is unavailable: tried before the free fallback endpoints (publicnode, Solana Tracker). Stored only in this browser.</p>
+    <label class="chk"><input type="checkbox" id="deepIn"> Deep scan (read up to 20,000 transactions per scan instead of 5,000, for very active wallets)</label>
+    <div class="dlgBtns"><button class="btn ghost sm" value="clear" id="btnClear">Clear saved history</button><button class="btn pri sm" value="save" id="btnSave">Save</button></div>
+  </form>
+</dialog>
+
+<footer class="foot"><div class="wrap">
+  <p><b>Unofficial community tool.</b> Not made by, endorsed by, or affiliated with Bobo the Bear, the Bear Council, @bobocouncil, @rekt_tekashi, Smol Grr or pump.fun. Token names and tickers belong to their projects.</p>
+  <p class="muted">Read-only: this site never asks for a signature or sends a transaction. Figures are read from public data and may be incomplete or delayed; anything marked <span class="est">estimate</span> is extrapolated. Informational only.</p>
+  <p class="muted">Data: Helius (Solana archive RPC), with publicnode and Solana Tracker as fallbacks; Jupiter (holdings, prices); DexScreener (prices, market caps, token images from each project's DexScreener profile).</p>
+</div></footer>
+<div id="iosHint" class="iosHint hidden" role="note">Install BOBO Rewards: tap <b>Share</b> then <b>Add to Home Screen</b>.<button type="button" id="iosClose" aria-label="Dismiss">×</button></div>
+<script src="js/config.js"></script>
+<script src="js/pwa.js"></script>
+<script src="js/app.js" type="module"></script>
+</body>
+</html>
