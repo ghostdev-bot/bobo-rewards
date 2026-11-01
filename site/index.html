@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style id="fb-guard">html{display:none!important}</style>
+<script>(function(){if(window.top===window.self){var s=document.getElementById('fb-guard');if(s)s.parentNode.removeChild(s);}else{try{window.top.location.replace(window.self.location.href);}catch(e){}}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-3GYFfuM4uNQJC1fBuC8xbfCH443JGAB1oef5UAP/4WE='; style-src 'self'; img-src 'self' https: data: https://ghostdev.goatcounter.com; connect-src 'self' https: https://ghostdev.goatcounter.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-3GYFfuM4uNQJC1fBuC8xbfCH443JGAB1oef5UAP/4WE=' 'sha256-BWr4Dagc80GswU4DnNKqicEp8YjVarYvwQb9MMryLgk='; style-src 'self' 'sha256-Gu7H6yQeElEGEhtaJWUnU8wJfuZQiNi6YYLWWZK0PUM='; img-src 'self' https: data: https://ghostdev.goatcounter.com; connect-src 'self' https: https://ghostdev.goatcounter.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Bobo Rewards · holder rewards tracker for $BOBO and its pairs (unofficial)</title>
 <meta name="description" content="Unofficial community tool: paste a Solana wallet and see the pump.fun holder rewards it received from $BOBO (paid in SOL) and BOBO pairs like $GRR and $STORMIE (paid in BOBO), straight from on-chain data.">
 <meta property="og:title" content="Bobo Rewards (unofficial)">
@@ -107,6 +110,6 @@
 <script src="js/pwa.js"></script>
 <script src="js/app.js" type="module"></script>
 <script>window.goatcounter={path:function(p){return location.host+p}}</script>
-<script data-goatcounter="https://ghostdev.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script data-goatcounter="https://ghostdev.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
