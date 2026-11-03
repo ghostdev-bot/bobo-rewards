@@ -810,11 +810,22 @@ async function renderBurns() {
   let d; try { d = await loadData('burns'); } catch { $('#burnRows').innerHTML = '<tr><td colspan="5" class="muted">Could not load the burn data.</td></tr>'; return; }
   const px = priceOf(BOBO), init = d.supply.initial || 1e9, bu = d.burned, ba = d.burnAddress;
   const pct = x => (x / init * 100).toFixed(x / init < 0.0001 ? 5 : 3) + '%';
-  const out = bu.amount + ba.balance;
+  const lk = d.locked || { wallets: [{ w: ba.address, label: 'BoboBurn address', reason: 'Vanity address with no private key.', amount: ba.balance }], total: ba.balance, checkedNotCounted: [] };
+  const out = bu.amount + lk.total;
   $('#burnCards').innerHTML = card('Burned (destroyed)', `${fmtNum(bu.amount, 0)} BOBO`, `${pct(bu.amount)} of supply${px ? ' · ' + fmtUsd(bu.amount * px) : ''}`, true)
     + card('Burn transactions', bu.count.toLocaleString(), `${bu.burners.toLocaleString()} wallet${bu.burners === 1 ? '' : 's'}`)
-    + card('At BoboBurn address', `${fmtNum(ba.balance, 0)} BOBO`, `${pct(ba.balance)} of supply${px ? ' · ' + fmtUsd(ba.balance * px) : ''}`)
-    + card('Out of circulation', `${fmtNum(out, 0)} BOBO`, `${pct(out)} · burned + BoboBurn`);
+    + card('Locked (can never move)', `${fmtNum(lk.total, 0)} BOBO`, `${pct(lk.total)} of supply${px ? ' · ' + fmtUsd(lk.total * px) : ''}`)
+    + card('Burned + locked', `${fmtNum(out, 0)} BOBO`, `${pct(out)} of supply${px ? ' · ' + fmtUsd(out * px) : ''}`);
+  $('#lockCards').innerHTML = card('Locked total', `${fmtNum(lk.total, 0)} BOBO`, `${pct(lk.total)} of supply${px ? ' · ' + fmtUsd(lk.total * px) : ''}`, true)
+    + card('Burned + locked combined', `${fmtNum(out, 0)} BOBO`, `${pct(out)} of supply${px ? ' · ' + fmtUsd(out * px) : ''}`)
+    + card('Locked wallets', String(lk.wallets.length), `of ${(lk.holdersScanned || 0).toLocaleString()} BOBO holders checked`);
+  const full = x => x.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const lockCell = r => `<span class="lbl">${esc(r.label)}${r.kind === 'time-locked' ? ' · time-locked' : ''}</span><br><a class="mono" href="https://solscan.io/account/${esc(r.w)}" target="_blank" rel="noopener">${esc(short(r.w))}</a>`;
+  $('#lockRows').innerHTML = (lk.wallets.length ? lk.wallets.map(r => `<tr><td class="w">${lockCell(r)}</td><td class="r"><b>${full(r.amount)}</b></td><td class="r">${pct(r.amount)}</td><td class="r">${px ? fmtUsd(r.amount * px) : '—'}</td><td class="why">${esc(r.reason)}</td></tr>`).join('')
+    + `<tr class="tot"><td><b>Total locked</b></td><td class="r"><b>${full(lk.total)}</b></td><td class="r"><b>${pct(lk.total)}</b></td><td class="r">${px ? fmtUsd(lk.total * px) : '—'}</td><td class="muted">Burned + locked: <b>${full(out)} BOBO · ${pct(out)}</b></td></tr>`
+    : '<tr><td colspan="5" class="muted">No provably locked wallets found.</td></tr>');
+  $('#lockNote').innerHTML = `Checked all ${(lk.tokenAccounts || 0).toLocaleString()} BOBO token accounts (${(lk.holdersScanned || 0).toLocaleString()} holders) at the snapshot (${esc(ago(d.generatedAt))}). ${esc(lk.rules || '')} % is of the ${init.toLocaleString('en-US')} BOBO initial supply.`;
+  $('#lockCheckedRows').innerHTML = (lk.checkedNotCounted || []).map(r => `<tr><td class="w"><a class="mono" href="https://solscan.io/account/${esc(r.w)}" target="_blank" rel="noopener">${esc(short(r.w))}</a></td><td class="r">${full(r.amount)}</td><td class="r">${pct(r.amount)}</td><td class="why">${esc(r.why)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">None.</td></tr>';
   const check = bu.matchesSupply ? `Cross-check passed: initial supply ${init.toLocaleString('en-US')} − current supply ${d.supply.current.toLocaleString('en-US', { maximumFractionDigits: 6 })} = ${fmtNum(d.supply.burnedBySupply, 2)} BOBO, exactly the sum of the burns listed.`
     : `Note: initial − current supply = ${fmtNum(d.supply.burnedBySupply, 2)} BOBO, while the listed burns add to ${fmtNum(bu.amount, 2)} BOBO.`;
   $('#burnNote').innerHTML = `Scanned <b>every</b> successful transaction that touched the BOBO mint (${d.range.txsScanned.toLocaleString()} txs) from the mint's creation on <b>${esc(fmtET(d.range.from))}</b> up to the snapshot at <b>${esc(fmtET(d.generatedAt))}</b> (${esc(ago(d.generatedAt))}). ${check} USD uses today's price.`;
@@ -824,9 +835,8 @@ async function renderBurns() {
   $('#burnRows').innerHTML = rows.map(b => `<tr><td>${esc(fmtET(b.ts))}</td><td class="r">${fmtNum(b.amount, 2)}</td><td class="r">${px ? fmtUsd(b.amount * px) : '—'}</td><td>${walletCell(b.w)}</td><td><a href="https://solscan.io/tx/${esc(b.sig)}" target="_blank" rel="noopener">${esc(b.sig.slice(0, 8))}…</a></td></tr>`).join('') || '<tr><td colspan="5" class="muted">No burns found.</td></tr>';
   $('#btnBurnMore').classList.toggle('hidden', d.burns.length <= burnShown);
   const kinds = Object.entries(ba.byKind || {}).map(([k, v]) => `${fmtNum(v.amount, 0)} BOBO via ${esc(k)} (${v.n.toLocaleString()} tx${v.n === 1 ? '' : 's'})`).join(' · ');
-  $('#burnAddr').innerHTML = `<p><a class="mono" href="https://solscan.io/account/${esc(ba.address)}" target="_blank" rel="noopener">${esc(ba.address)}</a></p>
-    <p>Holds <b>${fmtNum(ba.balance, 0)} BOBO</b> right now. It is a vanity address made of a name plus trailing 1s, so nobody can hold its private key and anything sent there can never move again. These tokens are <b>locked, not burned</b>: they still count in BOBO's on-chain supply, so they are shown separately from the burns above.</p>
-    <p class="muted sm">Inflows found: ${kinds || 'none'}.${d.incinerator?.balance ? ` The Solana incinerator address also holds ${fmtNum(d.incinerator.balance, 0)} BOBO.` : ''}</p>`;
+  $('#burnAddr').innerHTML = `<p>How BOBO reached the BoboBurn address: ${kinds || 'none found'}.${d.incinerator && !d.incinerator.balance ? ' The Solana incinerator (1nc1nerator…) holds 0 BOBO.' : ''}</p>`;
+  if (location.hash === '#/burns/locked' && !renderBurns.jumped) { renderBurns.jumped = true; setTimeout(() => $('#locked').scrollIntoView({ block: 'start' }), 0); }
 }
 $('#btnBurnMore').addEventListener('click', () => { burnShown += 200; renderBurns(); });
 
@@ -834,7 +844,7 @@ const PANES = { rewards: null, bobo: renderLbBobo, sol: renderLbSol, burns: rend
 let curPane = null, lastWallet = null;
 function route() {
   const h = location.hash || '#/';
-  const pane = h === '#/leaders/bobo' ? 'bobo' : h === '#/leaders/sol' ? 'sol' : h === '#/burns' ? 'burns' : 'rewards';
+  const pane = h === '#/leaders/bobo' ? 'bobo' : h === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
   document.querySelectorAll('[data-pane]').forEach(el => el.classList.toggle('hidden', el.dataset.pane !== pane));
   document.querySelectorAll('.tab').forEach(el => { const on = el.dataset.tab === pane; el.classList.toggle('on', on); el.setAttribute('aria-selected', on); if (on && el.scrollIntoView && el.parentNode.scrollWidth > el.parentNode.clientWidth) el.parentNode.scrollLeft = Math.max(0, el.offsetLeft - 14); });
   const changed = curPane !== pane; curPane = pane;

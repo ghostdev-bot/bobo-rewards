@@ -119,7 +119,7 @@
 <main class="wrap pane hidden" data-pane="burns">
   <section class="sec">
     <div class="secHead"><div><h2>$BOBO burn tracker</h2>
-      <p class="muted">Every on-chain burn of the BOBO token (SPL <code>Burn</code> / <code>BurnChecked</code> on mint <code>4nV5…pump</code>), plus BOBO parked at the unspendable BoboBurn address.</p></div></div>
+      <p class="muted">Every on-chain burn of the BOBO token (SPL <code>Burn</code> / <code>BurnChecked</code> on mint <code>4nV5…pump</code>), plus BOBO sitting in wallets that can never move it (<a href="#/burns/locked">locked supply</a>).</p></div></div>
     <div class="cards" id="burnCards"></div>
     <div id="burnNote" class="note"></div>
     <h3 class="h3">Biggest burners</h3>
@@ -127,8 +127,15 @@
     <h3 class="h3">Every burn <span class="muted sm" id="burnCount"></span></h3>
     <div class="tblWrap"><table class="tbl"><thead><tr><th>Time (ET)</th><th class="r">BOBO burned</th><th class="r">USD <span class="est">today's price</span></th><th>Burner</th><th>Tx</th></tr></thead><tbody id="burnRows"></tbody></table></div>
     <p><button class="btn ghost sm hidden" id="btnBurnMore" type="button">Show more</button></p>
-    <h3 class="h3">BoboBurn address</h3>
-    <div id="burnAddr" class="hcard"></div>
+    <h3 class="h3" id="locked">Locked wallet supply</h3>
+    <p class="muted sm">BOBO held by addresses that provably can't move it. Unlike burns, these tokens still count in BOBO's on-chain supply.</p>
+    <div class="cards" id="lockCards"></div>
+    <div class="tblWrap"><table class="tbl lockTbl"><thead><tr><th>Wallet</th><th class="r">BOBO</th><th class="r">% of supply</th><th class="r">USD <span class="est">today's price</span></th><th>Why it's locked</th></tr></thead><tbody id="lockRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table></div>
+    <div id="lockNote" class="note"></div>
+    <details class="hcard lockChecked"><summary>Big holders we checked and did <b>not</b> count as locked</summary>
+      <div class="tblWrap"><table class="tbl"><thead><tr><th>Wallet</th><th class="r">BOBO</th><th class="r">% of supply</th><th>Why it isn't locked</th></tr></thead><tbody id="lockCheckedRows"></tbody></table></div>
+    </details>
+    <div id="burnAddr" class="muted sm"></div>
   </section>
 </main>
 

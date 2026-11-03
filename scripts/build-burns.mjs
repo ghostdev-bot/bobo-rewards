@@ -7,6 +7,7 @@
 // Incremental + resumable: state in .cache/burns-state.json (outside the site). --full rebuilds.
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { buildLocked } from './locked.mjs';
 import { BOBO, BOBOBURN, GRR, STORMIE, rpc, allKeys, b58dec, distEvents, sig, readJson, writeJson, credits } from './lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,6 +77,7 @@ await scan(BOBOBURN, st.burnAddr, { tokenAccounts: 'balanceChanged' }, scanInflo
 const supply = await rpc('getTokenSupply', [BOBO]);
 const accts = async o => ((await rpc('getTokenAccountsByOwner', [o, { mint: BOBO }, { encoding: 'jsonParsed' }]))?.value || []).reduce((s, a) => s + BigInt(a.account.data.parsed.info.tokenAmount.amount), 0n);
 const burnBal = await accts(BOBOBURN), incBal = await accts(INCINERATOR);
+const locked = await buildLocked(st, supply.value.amount); writeJson(STATE, st);
 const ui = r => Number(BigInt(r)) / 10 ** DEC;
 const burns = st.burns.slice().sort((a, b) => a.slot - b.slot || a.i - b.i);
 const sumBurn = burns.reduce((s, b) => s + BigInt(b.raw), 0n);
@@ -90,9 +92,10 @@ const out = {
   burned: { amount: ui(sumBurn), count: burns.length, burners: Object.keys(byOwner).length, matchesSupply: initial != null && initial - BigInt(supply.value.amount) === sumBurn },
   burnAddress: { address: BOBOBURN, balance: ui(burnBal), inflowTxs: st.inflows.length, byKind: Object.fromEntries(Object.entries(inflow).map(([k, v]) => [k, { amount: ui(v.raw), n: v.n }])), txsScanned: st.burnAddr.scanned },
   incinerator: { address: INCINERATOR, balance: ui(incBal) },
+  locked,
   topBurners: Object.values(byOwner).sort((a, b) => (b.raw > a.raw ? 1 : b.raw < a.raw ? -1 : 0)).slice(0, 25).map(r => ({ w: r.w, amount: ui(r.raw), n: r.n, last: r.last })),
   burns: burns.reverse().slice(0, 5000).map(b => ({ ts: b.ts, amount: ui(b.raw), w: b.owner, sig: b.sig })),
 };
 writeJson(OUT, out);
 const big = burns.slice().sort((a, b) => (BigInt(b.raw) > BigInt(a.raw) ? 1 : -1)).slice(0, 3).map(b => ({ amount: ui(b.raw), w: b.owner, ts: b.ts, sig: b.sig }));
-console.log(JSON.stringify({ supply: out.supply, burned: out.burned, burnAddress: out.burnAddress, top3biggest: big, credits }));
+console.log(JSON.stringify({ locked: { total: locked.total, wallets: locked.wallets.map(w => [w.label, w.w, w.amount]), checked: locked.checkedNotCounted, rejected: locked.rejected }, supply: out.supply, burned: out.burned, burnAddress: out.burnAddress, top3biggest: big, credits }));

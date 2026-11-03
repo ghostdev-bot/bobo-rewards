@@ -38,3 +38,7 @@ USD values use today's price, not the price at payout time. Not affiliated with 
 
 ## License
 MIT
+
+## Locked wallet supply
+
+`scripts/locked.mjs` (run inside `build-burns.mjs`) reads every BOBO token account each refresh and counts an owner as locked only if it is the Solana incinerator, the System Program address, a hand-picked vanity burn address (name + 20+ trailing `1`s) whose full history shows it never signed or sent BOBO, or a token-lock escrow (Streamflow / Jupiter Lock / Bonfida, shown as time-locked). Pools, bonding curves, multisigs, staking programs and regular wallets (exchanges included) are never counted; the biggest such holders are listed on the page as "checked, not counted". Deep link: `#/burns/locked`.

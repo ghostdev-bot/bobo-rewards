@@ -113,3 +113,11 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 @media (max-width:640px){.tab{padding:11px 10px;font-size:13px}[id]{scroll-margin-top:110px}}
 @media (max-width:640px){.tabs .lg{display:none}.tab{padding:11px 12px}}
 @media (max-width:640px){.tbl a.x{display:none}}
+/* locked supply */
+.lockTbl .lbl{margin-left:0}
+.tbl td.why{font-size:12.5px;color:var(--mut);min-width:260px;max-width:520px;white-space:normal;line-height:1.4}
+.tbl tr.tot td{border-top:2px solid #6a1a26}
+.lockChecked{margin-top:14px}
+.lockChecked summary{cursor:pointer;font-weight:600}
+.lockChecked .tblWrap{margin-top:10px}
+@media (max-width:640px){.tbl td.why{min-width:200px}}
