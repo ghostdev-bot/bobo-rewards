@@ -23,7 +23,9 @@ The leaderboards and burn tracker read precomputed snapshots (`site/data/leaderb
 HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-leaderboard.mjs
 HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-burns.mjs
 HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-forecast.mjs
+HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-vaults.mjs   # Overview lifetime totals (site/data/vaults.json), incremental
 ```
+`scripts/refresh.sh` runs all four and redeploys (the live site refreshes every 6 hours).
 If your key is restricted to a domain, set `HELIUS_ORIGIN` to that origin. The burn script cross-checks its total against the mint's supply change. The pages show the covered time range and when the snapshot was built.
 
 ## Rewards forecast
