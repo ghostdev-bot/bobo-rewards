@@ -22,8 +22,23 @@ The leaderboards and burn tracker read precomputed snapshots (`site/data/leaderb
 ```bash
 HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-leaderboard.mjs
 HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-burns.mjs
+HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-forecast.mjs
 ```
 If your key is restricted to a domain, set `HELIUS_ORIGIN` to that origin. The burn script cross-checks its total against the mint's supply change. The pages show the covered time range and when the snapshot was built.
+
+## Rewards forecast
+The GRR, STORMIE and SOL tabs have a **Rewards forecast** panel (`#/leaders/grr/forecast` and so on). You pick a market cap, a daily volume, a horizon (1 day, 7 days, 30 days or 6 months) and optionally a holding or wallet. It estimates:
+
+```
+pool rewards  = daily volume (USD) × reward rate × days   (converted to BOBO or SOL at today's price)
+your share    = pool × your holding ÷ eligible supply
+```
+
+- **GRR / STORMIE** (paid in BOBO): the reward rate is the measured 30-day ratio of BOBO paid to holders ÷ BOBO trading volume. It reflects the 3% creator fee, the share of volume that is charged (routed hops pay none) and the payout ratio.
+- **SOL (BOBO holders)**: the rate is pump.fun's creator-fee tier for the chosen market cap × measured charged share × payout ratio, so higher MC means a lower fee tier.
+- The range uses the min and max weekly rates of the last 8 weeks. Eligible supply is measured from recent payouts.
+
+`scripts/build-forecast.mjs` builds `site/data/forecast.json` from on-chain trade and payout events (Helius), GeckoTerminal daily prices and DexScreener live stats. This is an estimate from past payout rates, not a guarantee and not financial advice. Long horizons are especially uncertain.
 
 ## Run
 ```bash

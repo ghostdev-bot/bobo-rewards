@@ -845,12 +845,172 @@ async function renderBurns() {
 }
 $('#btnBurnMore').addEventListener('click', () => { burnShown += 200; renderBurns(); });
 
-const PANES = { rewards: null, grr: renderCoinBoard('grr'), stormie: renderCoinBoard('stormie'), sol: renderLbSol, burns: renderBurns };
+// ---------- rewards forecast (GRR / STORMIE / SOL tabs) ----------
+// Estimate only: pool rewards = projected daily volume (in the quote asset) x reward rate measured from past payouts
+// (data/forecast.json, built on the box from every trade event and every DistributeFeeToHolders payout). Your share =
+// your holding / eligible supply (measured from recent payouts). See the "How this estimate works" box on each tab.
+const STORMIE_MINT = 'HqyTxEqk7qmLu2Gnx46eEZwQhzCf2yVqRompLaKYpump';
+const FC = { grr: { el: 'fcGRR', mint: GRR, pay: BOBO }, stormie: { el: 'fcSTORMIE', mint: STORMIE_MINT, pay: BOBO }, sol: { el: 'fcSol', mint: BOBO, pay: SOL } };
+const FC_H = [[1, '1 day'], [7, '7 days'], [30, '30 days'], [182, '6 months']];
+const FC_PRE = [[1, 'Now'], [2, '2x MC'], [5, '5x MC'], [10, '10x MC']];
+const fcState = {};
+function parseAmt(v) {
+  const m = /^\s*\$?\s*([0-9][0-9,]*\.?[0-9]*|\.[0-9]+)\s*([kmb])?\s*$/i.exec(String(v || ''));
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, '')) * ({ k: 1e3, m: 1e6, b: 1e9 }[(m[2] || '').toLowerCase()] || 1);
+  return isFinite(n) ? n : null;
+}
+const fcTier = (mcSol, tiers) => { let b = tiers[0][1]; for (const [t, bps] of tiers) if (mcSol >= t) b = bps; return b; };
+const logPos = (v, lo, hi) => Math.round(1000 * Math.log(Math.max(lo, Math.min(hi, v)) / lo) / Math.log(hi / lo));
+const logVal = (p, lo, hi) => lo * Math.pow(hi / lo, p / 1000);
+const nice = v => { const e = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / e) * e; };
+const pctS = (x, dp = 2) => x == null || !isFinite(x) ? '—' : (x * 100).toFixed(dp) + '%';
+
+function fcModel(key, D) {
+  const s = D.src[key], c = FC[key], st = fcState[key];
+  const px = priceOf(c.pay) || (c.pay === SOL ? D.prices.solUsd : D.prices.boboUsd);
+  const solPx = priceOf(SOL) || D.prices.solUsd;
+  let rate, tierBps = null;
+  if (key === 'sol') { tierBps = fcTier(st.mc / solPx, D.solFeeTiers); rate = tierBps / 1e4 * (s.d30.chargedShare || 1) * (s.d30.payoutToFee || 1); }
+  else rate = s.d30.rewardRate;
+  const wr = (s.weeks || []).slice(0, 6).map(w => w.rate).filter(x => x > 0);
+  const mean = wr.length ? wr.reduce((a, b) => a + b, 0) / wr.length : null;
+  const lo = mean ? Math.min(1, Math.min(...wr) / mean) : 0.5, hi = mean ? Math.max(1, Math.max(...wr) / mean) : 1.5;
+  const perDay = px ? st.vol / px * rate : null; // pool rewards per day, in the pay token
+  const tot = perDay * st.h, elig = s.eligible?.supply || s.supply;
+  const share = st.hold > 0 && elig ? Math.min(1, st.hold / elig) : 0;
+  const holdUsd = st.hold > 0 && s.supply ? st.hold * st.mc / s.supply : null;
+  return { s, px, solPx, rate, tierBps, lo, hi, perDay, tot, elig, share, holdUsd, wr };
+}
+
+function fcChart(s, D, key) {
+  const days = (s.days || []).slice(-30); if (days.length < 5) return '';
+  const rate = s.d30.rewardRate, W = 600, H = 120, P = 4;
+  const max = Math.max(...days.map(d => Math.max(d.paid, d.vol * rate))) || 1, bw = (W - 2 * P) / days.length;
+  const y = v => H - P - (v / max) * (H - 2 * P);
+  const bars = days.map((d, i) => `<rect x="${(P + i * bw + 1).toFixed(1)}" y="${y(d.paid).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(H - P - y(d.paid)).toFixed(1)}" rx="1.5" fill="#b90c2a"><title>${esc(d.d)}: ${fmtNum(d.paid)} ${esc(s.pay)} paid · volume ${fmtUsd(d.volUsd)}</title></rect>`).join('');
+  const line = days.map((d, i) => `${i ? 'L' : 'M'}${(P + i * bw + bw / 2).toFixed(1)} ${y(d.vol * rate).toFixed(1)}`).join(' ');
+  return `<div class="fcChart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Daily rewards paid vs. rate times volume, last 30 days">${bars}<path d="${line}" fill="none" stroke="#f6c26b" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+    <div class="fcLeg"><span><i class="b"></i>${esc(s.pay)} actually paid per day</span><span><i class="l"></i>volume × ${pctS(rate)} (the model)</span><span class="muted">last 30 full days (UTC) · ${esc(days[0].d)} → ${esc(days[days.length - 1].d)}</span></div></div>`;
+}
+
+function fcDraw(key, D) {
+  const st = fcState[key], c = FC[key], root = document.getElementById(c.el); if (!root || !st) return;
+  const m = fcModel(key, D), s = m.s, sym = s.sym, pay = s.pay, dp = pay === 'SOL' ? 3 : 0;
+  const q = id => root.querySelector('[data-fc="' + id + '"]');
+  if (!q('mc')) return;
+  if (document.activeElement !== q('mc')) q('mc').value = fmtUsd(st.mc).replace('$', '');
+  if (document.activeElement !== q('vol')) q('vol').value = fmtUsd(st.vol).replace('$', '');
+  q('mcR').value = logPos(st.mc, st.mcLo, st.mcHi); q('volR').value = logPos(st.vol, st.volLo, st.volHi);
+  root.querySelectorAll('[data-h]').forEach(b => b.classList.toggle('on', Number(b.dataset.h) === st.h));
+  root.querySelectorAll('[data-pre]').forEach(b => b.classList.toggle('on', st.pre === Number(b.dataset.pre)));
+  const hl = FC_H.find(h => h[0] === st.h)[1];
+  const usd = x => m.px ? fmtUsd(x * m.px) : '—';
+  const rng = x => `${fmtNum(x * m.lo, dp)} – ${fmtNum(x * m.hi, dp)} ${esc(pay)}`;
+  const you = m.tot * m.share;
+  q('out').innerHTML =
+    card(`All ${esc(sym)} holders · ${esc(hl)}`, `${fmtNum(m.tot, dp)} ${esc(pay)}`, `≈ ${usd(m.tot)} · range ${rng(m.tot)}`, true)
+    + card(`Your estimate · ${esc(hl)}`, st.hold > 0 ? `${fmtNum(you, pay === 'SOL' ? 4 : 0)} ${esc(pay)}` : '—',
+      st.hold > 0 ? `≈ ${usd(you)} · ${pctS(m.share, m.share < 0.001 ? 4 : 2)} of eligible supply` : 'Enter a holding or wallet below')
+    + card('Per day · all holders', `${fmtNum(m.perDay, dp)} ${esc(pay)}`, `≈ ${usd(m.perDay)} at ${fmtUsd(st.vol)}/day volume`)
+    + card(`Per 1M ${esc(sym)} held · ${esc(hl)}`, `${fmtNum(m.elig ? m.tot * 1e6 / m.elig : null, pay === 'SOL' ? 4 : 0)} ${esc(pay)}`, `≈ ${m.elig ? usd(m.tot * 1e6 / m.elig) : '—'}`);
+  const rateTxt = key === 'sol'
+    ? `creator-fee tier at ${fmtNum(st.mc / m.solPx, 0)} SOL market cap: <b>${(m.tierBps / 100).toFixed(m.tierBps % 10 ? 3 : 2)}%</b> → effective <b>${pctS(m.rate, 3)}</b> of volume`
+    : `<b>${pctS(m.rate)}</b> of ${esc(sym)} volume (3% creator fee, ~${pctS(s.d30.chargedShare, 0)} of volume charged)`;
+  q('rate').innerHTML = `Reward rate used: ${rateTxt}. ${esc(pay)} price ${fmtPrice(m.px)} (today).`;
+  q('hold').classList.toggle('bad', st.holdErr);
+  q('holdNote').innerHTML = st.holdMsg || (st.hold > 0 ? `${fmtNum(st.hold, 0)} ${esc(sym)} ≈ ${fmtUsd(m.holdUsd)} at this market cap${m.holdUsd != null && m.holdUsd < MIN_ELIGIBLE_USD ? ' · <span class="tag no">below the ~$20 minimum, may receive nothing</span>' : ''}` : `Eligible supply ≈ ${fmtNum(m.elig, 0)} ${esc(sym)} (measured from recent payouts)`);
+  q('warn').classList.toggle('hidden', st.h < 30);
+}
+
+async function renderForecast(key) {
+  const c = FC[key], root = document.getElementById(c.el); if (!root) return;
+  let D; try { D = await loadData('forecast'); } catch { root.innerHTML = '<p class="muted">Could not load the forecast data.</p>'; return; }
+  const s = D.src[key]; if (!s) { root.innerHTML = '<p class="muted">No forecast data yet.</p>'; return; }
+  const live = market[c.mint] || {};
+  const liveMc = live.mcap || s.live?.mcUsd, liveVol = live.vol ?? s.live?.vol24Usd ?? s.d7.volUsdPerDay;
+  let st = fcState[key];
+  if (!st) {
+    st = fcState[key] = { mc: liveMc, vol: liveVol, h: 30, pre: 1, hold: 0, holdMsg: '', holdErr: false, baseMc: liveMc, baseVol: liveVol };
+    st.mcLo = nice(liveMc / 20); st.mcHi = nice(liveMc * 200); st.volLo = 50; st.volHi = nice(Math.max(liveVol, s.d30.volUsdPerDay, 1000) * 200);
+    const sym = s.sym, pay = s.pay, dp = pay === 'SOL' ? 3 : 0;
+    const corr = s.corr30?.paidVsVol, weak = corr == null || corr < 0.6;
+    const wk = (s.weeks || []).slice(0, 6);
+    root.innerHTML = `
+      <div class="secHead"><div><h2>Rewards forecast <span class="est">estimate</span></h2>
+        <p class="muted">What $${esc(sym)} holders could receive in <b>${esc(pay)}</b> at a market cap and daily trading volume you choose, using the reward rate measured from past payouts. Estimate only: not a guarantee and not financial advice.</p></div></div>
+      <div class="fcGrid">
+        <div class="fcIn">
+          <div class="fcPre" role="group" aria-label="Presets">${FC_PRE.map(([x, l]) => `<button type="button" class="chip" data-pre="${x}">${l}</button>`).join('')}</div>
+          <p class="muted sm fcPreNote">Presets multiply today's market cap and scale daily volume by the same factor (same turnover as now).</p>
+          <label class="fcF"><span>$${esc(sym)} market cap (USD)</span><input data-fc="mc" type="text" inputmode="decimal" aria-label="Projected market cap in USD"></label>
+          <input data-fc="mcR" type="range" min="0" max="1000" aria-label="Projected market cap slider">
+          <p class="muted sm">Now ${fmtUsd(liveMc)}${key === 'sol' ? ' · on BOBO the market cap sets pump.fun\'s creator-fee tier' : ' · on GRR/STORMIE the market cap changes your holding\'s value, not the fee rate'}</p>
+          <label class="fcF"><span>Daily trading volume (USD)</span><input data-fc="vol" type="text" inputmode="decimal" aria-label="Projected daily volume in USD"></label>
+          <input data-fc="volR" type="range" min="0" max="1000" aria-label="Projected daily volume slider">
+          <p class="muted sm">Use: <button type="button" class="btn link sm" data-v="${liveVol}">24h ${fmtUsd(liveVol)}</button> · <button type="button" class="btn link sm" data-v="${s.d7.volUsdPerDay}">7d avg ${fmtUsd(s.d7.volUsdPerDay)}</button> · <button type="button" class="btn link sm" data-v="${s.d30.volUsdPerDay}">30d avg ${fmtUsd(s.d30.volUsdPerDay)}</button></p>
+          <div class="fcF"><span>Time horizon</span><div class="seg" role="group" aria-label="Time horizon">${FC_H.map(([d, l]) => `<button type="button" data-h="${d}">${l}</button>`).join('')}</div></div>
+          <label class="fcF"><span>Your $${esc(sym)} holding</span><span class="fcHold"><input data-fc="hold" type="text" spellcheck="false" placeholder="Amount (e.g. 5m) or wallet address" aria-label="Your holding amount or wallet address"><button type="button" class="btn sm" data-fc="holdGo">Apply</button></span></label>
+          <p class="muted sm" data-fc="holdNote"></p>
+        </div>
+        <div class="fcRes">
+          <div class="cards fcCards" data-fc="out"></div>
+          <p class="sm fcRate" data-fc="rate"></p>
+          <div class="note fcWarn hidden" data-fc="warn"><b>Long horizon:</b> 30-day and especially 6-month numbers are extra uncertain. They assume today's volume, fee rate, holder base and ${esc(pay)} price hold for the whole period, which rarely happens for small-cap coins. Treat them as a what-if, not an expectation.</div>
+        </div>
+      </div>
+      ${fcChart(s, D, key)}
+      <details class="fcHow"><summary>How this estimate works</summary>
+        <p><b>Formula.</b> Pool rewards per day (${esc(pay)}) = daily volume (USD) ÷ ${esc(pay)} price (USD) × reward rate. Period total = per day × days. Your rewards = pool rewards × your holding ÷ eligible supply. ${key === 'sol'
+          ? `Reward rate = pump.fun creator-fee tier at the projected market cap (in SOL, <a href="https://pump.fun/docs/fees" target="_blank" rel="noopener">fee schedule</a>) × share of volume actually charged (${pctS(s.d30.chargedShare, 1)}, last 30d) × payouts ÷ fees (${s.d30.payoutToFee?.toFixed(3)}).`
+          : `Reward rate = BOBO paid to holders ÷ ${esc(sym)} volume in BOBO over the last 30 days (${pctS(s.d30.rewardRate)}). ${esc(sym)} is a BOBO pair with a flat 3% creator fee (seen on every fee-charging trade, at every market cap so far); part of the volume comes from routed multi-hop trades that carry no fee, so the effective rate is lower.`}</p>
+        <p><b>Measured (last 30 full days, UTC).</b> Volume ${fmtUsd(s.d30.volUsd)} (${fmtUsd(s.d30.volUsdPerDay)}/day) · creator fees ${fmtNum(s.d30.fee, dp)} ${esc(pay)} · paid to holders ${fmtNum(s.d30.paid, dp)} ${esc(pay)} (${fmtNum(s.d30.paidPerDay, dp)}/day) · payouts ÷ fees ${s.d30.payoutToFee?.toFixed(3)} · ${fmtNum(s.d30.rewardPerUsdVol, pay === 'SOL' ? 7 : 3)} ${esc(pay)} paid per $1 of volume.
+          Daily correlation of payouts with volume: <b>${corr == null ? '—' : corr.toFixed(2)}</b>${weak ? ' (weak: payouts are batched and lag trades, so daily numbers are noisy; the range matters more)' : ' (strong: payouts track volume closely)'}.</p>
+        <p><b>Range.</b> The range uses the lowest and highest weekly reward rate of the last ${wk.length} weeks: ${wk.map(w => pctS(w.rate)).join(' · ') || '—'}.</p>
+        <p><b>Eligible supply.</b> ${fmtNum(s.eligible?.supply, 0)} ${esc(sym)} of ${fmtNum(s.supply, 0)} total: measured from the last 2 days of payouts (each wallet's share of payouts matches its share of this amount; the pool and wallets under the ~$20 minimum are not paid).</p>
+        <p><b>Assumes:</b> the volume you enter is sustained every day; the fee rate stays as measured (pump.fun can change fees); USD uses today's ${esc(pay)} price; your holding and other holders' balances don't change. Data: every trade event and every <code>DistributeFeeToHolders</code> payout on-chain (Helius), BOBO/SOL daily prices from GeckoTerminal, live market cap and 24h volume from DexScreener. Snapshot built ${esc(fmtET(D.generatedAt))} (${esc(ago(D.generatedAt))}).</p>
+      </details>
+      <p class="muted sm fcDisc">Estimate based on past payout rates. Not a guarantee of future rewards and not financial advice. Rewards depend on future trading volume, which nobody can predict.</p>`;
+    const q = id => root.querySelector('[data-fc="' + id + '"]');
+    const redraw = () => fcDraw(key, D);
+    root.querySelectorAll('[data-pre]').forEach(b => b.addEventListener('click', () => { const x = Number(b.dataset.pre); st.pre = x; st.mc = st.baseMc * x; st.vol = st.baseVol * x; redraw(); }));
+    root.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => { st.h = Number(b.dataset.h); redraw(); }));
+    root.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { st.vol = Number(b.dataset.v); st.pre = null; redraw(); }));
+    q('mcR').addEventListener('input', e => { st.mc = nice(logVal(+e.target.value, st.mcLo, st.mcHi)); st.pre = null; redraw(); });
+    q('volR').addEventListener('input', e => { st.vol = nice(logVal(+e.target.value, st.volLo, st.volHi)); st.pre = null; redraw(); });
+    q('mc').addEventListener('change', e => { const v = parseAmt(e.target.value); if (v > 0) { st.mc = v; st.pre = null; } redraw(); });
+    q('vol').addEventListener('change', e => { const v = parseAmt(e.target.value); if (v >= 0) { st.vol = v; st.pre = null; } redraw(); });
+    const applyHold = async () => {
+      const raw = q('hold').value.trim(); st.holdErr = false; st.holdMsg = '';
+      if (!raw) { st.hold = 0; return redraw(); }
+      if (isAddress(raw)) {
+        st.holdMsg = 'Looking up the wallet…'; redraw();
+        try { const bal = await loadBalances(raw); if (bal.__failed) throw new Error('lookup failed');
+          st.hold = bal[c.mint] || 0; st.holdMsg = `Wallet <span class="mono">${esc(short(raw))}</span> holds <b>${fmtNum(st.hold, 0)} ${esc(sym)}</b>${st.hold ? '' : ' (nothing to forecast)'}.`;
+        } catch { st.holdErr = true; st.holdMsg = 'Could not read that wallet right now. Enter the amount instead.'; }
+        return redraw();
+      }
+      const v = parseAmt(raw); if (v == null) { st.holdErr = true; st.holdMsg = 'Enter an amount like 2500000 or 2.5m, or a Solana wallet address.'; } else st.hold = v;
+      redraw();
+    };
+    q('holdGo').addEventListener('click', applyHold);
+    q('hold').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyHold(); } });
+    if (lastWallet) { q('hold').value = lastWallet; applyHold(); }
+  } else if (st.pre === 1 && liveMc && (liveMc !== st.baseMc || liveVol !== st.baseVol)) {
+    st.baseMc = st.mc = liveMc; st.baseVol = st.vol = liveVol; // live market data arrived: refresh the "Now" values
+  }
+  fcDraw(key, D);
+  if (/\/forecast$/.test(location.hash) && !renderForecast['jumped' + key]) { renderForecast['jumped' + key] = true; setTimeout(() => root.scrollIntoView({ block: 'start' }), 0); }
+}
+
+const withFc = (key, fn) => () => { fn(); renderForecast(key); };
+const PANES = { rewards: null, grr: withFc('grr', renderCoinBoard('grr')), stormie: withFc('stormie', renderCoinBoard('stormie')), sol: withFc('sol', renderLbSol), burns: renderBurns };
 let curPane = null, lastWallet = null;
 function route() {
   if (location.hash === '#/leaders/bobo') history.replaceState(null, '', '#/leaders/grr'); // old combined tab
   const h = location.hash || '#/';
-  const pane = h === '#/leaders/grr' ? 'grr' : h === '#/leaders/stormie' ? 'stormie' : h === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
+  const hb = h.replace(/\/forecast$/, '');
+  const pane = hb === '#/leaders/grr' ? 'grr' : hb === '#/leaders/stormie' ? 'stormie' : hb === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
   document.querySelectorAll('[data-pane]').forEach(el => el.classList.toggle('hidden', el.dataset.pane !== pane));
   document.querySelectorAll('.tab').forEach(el => { const on = el.dataset.tab === pane; el.classList.toggle('on', on); el.setAttribute('aria-selected', on); if (on && el.scrollIntoView && el.parentNode.scrollWidth > el.parentNode.clientWidth) el.parentNode.scrollLeft = Math.max(0, el.offsetLeft - 14); });
   const changed = curPane !== pane; curPane = pane;

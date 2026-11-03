@@ -38,11 +38,12 @@ export async function rpc(method, params, tries = 8) {
   throw last;
 }
 // getTransactionsForAddress, full transactions, oldest first, optionally only slots > afterSlot.
-export async function* gtfaAll(address, { afterSlot = null, label = address.slice(0, 6) } = {}) {
+export async function* gtfaAll(address, { afterSlot = null, fromTime = null, label = address.slice(0, 6) } = {}) {
   let token = null, pages = 0, n = 0;
   do {
     const p = { transactionDetails: 'full', limit: 1000, encoding: 'json', maxSupportedTransactionVersion: 1, sortOrder: 'asc', filters: { status: 'succeeded' } };
     if (afterSlot != null) p.filters.slot = { gt: afterSlot };
+    else if (fromTime != null) p.filters.blockTime = { gte: fromTime };
     if (token) p.paginationToken = token;
     const r = await rpc('getTransactionsForAddress', [address, p]);
     const d = r?.data || []; pages++; n += d.length; credits += Math.max(10, Math.ceil(d.length / 100) * 10);
