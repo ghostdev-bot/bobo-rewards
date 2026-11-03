@@ -761,12 +761,101 @@ async function updateVaults() {
   btn.disabled = false; btn.textContent = 'Update to now';
 }
 
+
+// ---------- tabs: leaderboards + burn tracker (precomputed JSON built on the box, see scripts/) ----------
+const KNOWN = {
+  BoboBurn11111111111111111111111111111111111: 'BoboBurn address',
+  [DISTRIBUTOR]: 'pump.fun distributor',
+};
+const etFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+const fmtET = ts => ts ? etFmt.format(new Date(ts * 1000)) + ' ET' : '—';
+const etDay = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+const fmtDay = ts => ts ? etDay.format(new Date(ts * 1000)) : '—';
+function walletCell(w) {
+  const lbl = KNOWN[w] ? `<span class="lbl">${esc(KNOWN[w])}</span>` : '';
+  return `<a class="mono" href="https://solscan.io/account/${esc(w)}" target="_blank" rel="noopener" title="${esc(w)}">${esc(short(w))}</a>${lbl}<a class="x" href="#/w/${esc(w)}" title="Open this wallet's rewards">rewards ›</a>`;
+}
+const rankCell = i => i < 3 ? `<span class="medal g${i + 1}">${i + 1}</span>` : `<span class="rk">${i + 1}</span>`;
+const card = (k, v, sub, hl) => `<div class="card${hl ? ' hl' : ''}"><div class="k">${k}</div><div class="v">${v}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+const dataCache = {};
+async function loadData(name) {
+  if (!dataCache[name]) dataCache[name] = fetch('data/' + name + '.json', { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).catch(e => { delete dataCache[name]; throw e; });
+  return dataCache[name];
+}
+function coverNote(b, gen) {
+  return `Covers <b>every</b> holder-reward payout (${b.distTxs.toLocaleString()} distribution transactions) from <b>${esc(fmtET(b.from))}</b> (first payout) to <b>${esc(fmtET(b.to))}</b>. Snapshot built ${esc(fmtET(gen))} (${esc(ago(gen))}); payouts after that are not included yet. Amount = the wallet's SOL/BOBO balance increase in each distribution transaction. USD uses today's price, not the price at payout time.`;
+}
+async function renderLbBobo() {
+  let d; try { d = await loadData('leaderboard'); } catch { $('#lbBoboRows').innerHTML = '<tr><td colspan="7" class="muted">Could not load the leaderboard data.</td></tr>'; return; }
+  const b = d.bobo, px = priceOf(BOBO), pc = b.perCoin;
+  $('#lbBoboCards').innerHTML = card('BOBO paid out', `${fmtNum(b.totalPaid, 0)} BOBO`, px ? fmtUsd(b.totalPaid * px) + ' today' : '', true)
+    + card('From $GRR', `${fmtNum(pc.GRR?.total, 0)} BOBO`, `${(pc.GRR?.distTxs || 0).toLocaleString()} payout txs`)
+    + card('From $STORMIE', `${fmtNum(pc.STORMIE?.total, 0)} BOBO`, `${(pc.STORMIE?.distTxs || 0).toLocaleString()} payout txs`)
+    + card('Wallets paid', b.wallets.toLocaleString(), `since ${esc(fmtDay(b.from))}`);
+  $('#lbBoboNote').innerHTML = coverNote(b, d.generatedAt) + ' The BoboBurn address holds 20% of GRR, so it receives GRR rewards like any holder.';
+  $('#lbBoboRows').innerHTML = b.top.map((r, i) => `<tr><td class="r">${rankCell(i)}</td><td class="w">${walletCell(r.w)}</td><td class="r">${r.grr ? fmtNum(r.grr, 0) : '—'}</td><td class="r">${r.stormie ? fmtNum(r.stormie, 0) : '—'}</td><td class="r"><b>${fmtNum(r.bobo, 0)}</b></td><td class="r">${px ? fmtUsd(r.bobo * px) : '—'}</td><td class="r">${r.n.toLocaleString()}</td></tr>`).join('');
+}
+async function renderLbSol() {
+  let d; try { d = await loadData('leaderboard'); } catch { $('#lbSolRows').innerHTML = '<tr><td colspan="5" class="muted">Could not load the leaderboard data.</td></tr>'; return; }
+  const b = d.sol, px = priceOf(SOL);
+  $('#lbSolCards').innerHTML = card('SOL paid to holders', `${fmtNum(b.totalPaid, 2)} SOL`, px ? fmtUsd(b.totalPaid * px) + ' today' : '', true)
+    + card('Payout txs', b.distTxs.toLocaleString(), 'BOBO reward vault')
+    + card('Wallets paid', b.wallets.toLocaleString(), `since ${esc(fmtDay(b.from))}`)
+    + card('Top 25 share', b.totalPaid ? (b.top.reduce((s, r) => s + r.sol, 0) / b.totalPaid * 100).toFixed(1) + '%' : '—', 'of all SOL paid');
+  $('#lbSolNote').innerHTML = coverNote(b, d.generatedAt);
+  $('#lbSolRows').innerHTML = b.top.map((r, i) => `<tr><td class="r">${rankCell(i)}</td><td class="w">${walletCell(r.w)}</td><td class="r"><b>${fmtNum(r.sol, 3)}</b> SOL</td><td class="r">${px ? fmtUsd(r.sol * px) : '—'}</td><td class="r">${r.n.toLocaleString()}</td></tr>`).join('');
+}
+let burnShown = 100;
+async function renderBurns() {
+  let d; try { d = await loadData('burns'); } catch { $('#burnRows').innerHTML = '<tr><td colspan="5" class="muted">Could not load the burn data.</td></tr>'; return; }
+  const px = priceOf(BOBO), init = d.supply.initial || 1e9, bu = d.burned, ba = d.burnAddress;
+  const pct = x => (x / init * 100).toFixed(x / init < 0.0001 ? 5 : 3) + '%';
+  const out = bu.amount + ba.balance;
+  $('#burnCards').innerHTML = card('Burned (destroyed)', `${fmtNum(bu.amount, 0)} BOBO`, `${pct(bu.amount)} of supply${px ? ' · ' + fmtUsd(bu.amount * px) : ''}`, true)
+    + card('Burn transactions', bu.count.toLocaleString(), `${bu.burners.toLocaleString()} wallet${bu.burners === 1 ? '' : 's'}`)
+    + card('At BoboBurn address', `${fmtNum(ba.balance, 0)} BOBO`, `${pct(ba.balance)} of supply${px ? ' · ' + fmtUsd(ba.balance * px) : ''}`)
+    + card('Out of circulation', `${fmtNum(out, 0)} BOBO`, `${pct(out)} · burned + BoboBurn`);
+  const check = bu.matchesSupply ? `Cross-check passed: initial supply ${init.toLocaleString('en-US')} − current supply ${d.supply.current.toLocaleString('en-US', { maximumFractionDigits: 6 })} = ${fmtNum(d.supply.burnedBySupply, 2)} BOBO, exactly the sum of the burns listed.`
+    : `Note: initial − current supply = ${fmtNum(d.supply.burnedBySupply, 2)} BOBO, while the listed burns add to ${fmtNum(bu.amount, 2)} BOBO.`;
+  $('#burnNote').innerHTML = `Scanned <b>every</b> successful transaction that touched the BOBO mint (${d.range.txsScanned.toLocaleString()} txs) from the mint's creation on <b>${esc(fmtET(d.range.from))}</b> up to the snapshot at <b>${esc(fmtET(d.generatedAt))}</b> (${esc(ago(d.generatedAt))}). ${check} USD uses today's price.`;
+  $('#burnTopRows').innerHTML = d.topBurners.length ? d.topBurners.map((r, i) => `<tr><td class="r">${rankCell(i)}</td><td>${walletCell(r.w)}</td><td class="r"><b>${fmtNum(r.amount, 2)}</b></td><td class="r">${px ? fmtUsd(r.amount * px) : '—'}</td><td class="r">${r.n}</td><td>${esc(fmtET(r.last))}</td></tr>`).join('') : '<tr><td colspan="6" class="muted">No burns found.</td></tr>';
+  const rows = d.burns.slice(0, burnShown);
+  $('#burnCount').textContent = `(${bu.count.toLocaleString()} total, newest first${d.burns.length < bu.count ? `, latest ${d.burns.length.toLocaleString()} listed` : ''})`;
+  $('#burnRows').innerHTML = rows.map(b => `<tr><td>${esc(fmtET(b.ts))}</td><td class="r">${fmtNum(b.amount, 2)}</td><td class="r">${px ? fmtUsd(b.amount * px) : '—'}</td><td>${walletCell(b.w)}</td><td><a href="https://solscan.io/tx/${esc(b.sig)}" target="_blank" rel="noopener">${esc(b.sig.slice(0, 8))}…</a></td></tr>`).join('') || '<tr><td colspan="5" class="muted">No burns found.</td></tr>';
+  $('#btnBurnMore').classList.toggle('hidden', d.burns.length <= burnShown);
+  const kinds = Object.entries(ba.byKind || {}).map(([k, v]) => `${fmtNum(v.amount, 0)} BOBO via ${esc(k)} (${v.n.toLocaleString()} tx${v.n === 1 ? '' : 's'})`).join(' · ');
+  $('#burnAddr').innerHTML = `<p><a class="mono" href="https://solscan.io/account/${esc(ba.address)}" target="_blank" rel="noopener">${esc(ba.address)}</a></p>
+    <p>Holds <b>${fmtNum(ba.balance, 0)} BOBO</b> right now. It is a vanity address made of a name plus trailing 1s, so nobody can hold its private key and anything sent there can never move again. These tokens are <b>locked, not burned</b>: they still count in BOBO's on-chain supply, so they are shown separately from the burns above.</p>
+    <p class="muted sm">Inflows found: ${kinds || 'none'}.${d.incinerator?.balance ? ` The Solana incinerator address also holds ${fmtNum(d.incinerator.balance, 0)} BOBO.` : ''}</p>`;
+}
+$('#btnBurnMore').addEventListener('click', () => { burnShown += 200; renderBurns(); });
+
+const PANES = { rewards: null, bobo: renderLbBobo, sol: renderLbSol, burns: renderBurns };
+let curPane = null, lastWallet = null;
+function route() {
+  const h = location.hash || '#/';
+  const pane = h === '#/leaders/bobo' ? 'bobo' : h === '#/leaders/sol' ? 'sol' : h === '#/burns' ? 'burns' : 'rewards';
+  document.querySelectorAll('[data-pane]').forEach(el => el.classList.toggle('hidden', el.dataset.pane !== pane));
+  document.querySelectorAll('.tab').forEach(el => { const on = el.dataset.tab === pane; el.classList.toggle('on', on); el.setAttribute('aria-selected', on); if (on && el.scrollIntoView && el.parentNode.scrollWidth > el.parentNode.clientWidth) el.parentNode.scrollLeft = Math.max(0, el.offsetLeft - 14); });
+  const changed = curPane !== pane; curPane = pane;
+  if (PANES[pane]) PANES[pane]();
+  if (pane === 'rewards') {
+    const m = /^#\/w\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(h);
+    if (m && m[1] !== lastWallet) { lastWallet = m[1]; $('#addr').value = m[1]; go(m[1]); return; }
+    const anchor = /^#([a-z]+)$/.exec(h);
+    if (anchor && document.getElementById(anchor[1])) { setTimeout(() => document.getElementById(anchor[1]).scrollIntoView({ block: 'start' }), 0); return; }
+  }
+  if (changed) window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
 // ---------- UI wiring ----------
 function setBusy(b) { $('#btnGo').disabled = b; $('#btnRefresh').disabled = b; $('#btnGo').textContent = b ? 'Scanning…' : 'Check rewards'; }
 function go(addr) {
   addr = (addr || '').trim();
   if (!isAddress(addr)) { $('#addr').setCustomValidity('That does not look like a Solana address'); $('#addr').reportValidity(); return; }
   $('#addr').setCustomValidity('');
+  lastWallet = addr;
   if (location.hash !== '#/w/' + addr) history.replaceState(null, '', '#/w/' + addr);
   scanWallet(addr);
   setTimeout(() => $('#wallet').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -796,8 +885,8 @@ $('#btnClear').addEventListener('click', () => { Object.keys(localStorage).filte
   await loadSnapshot();
   if (snapshot) $('#btnMeasure').textContent = 'Update to now';
   renderOverview();
+  route();
   await loadMarket();
   renderOverview();
-  const m = /^#\/w\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(location.hash);
-  if (m) { $('#addr').value = m[1]; go(m[1]); }
+  if (PANES[curPane]) PANES[curPane](); // re-render with live prices
 })();

@@ -34,7 +34,14 @@
     <button id="btnSettings" class="icon" title="Data settings" aria-label="Data settings">⚙</button>
   </div>
 </div></nav>
+<nav class="tabs" aria-label="Sections"><div class="wrap" role="tablist">
+  <a class="tab" role="tab" href="#/" data-tab="rewards">Rewards</a>
+  <a class="tab" role="tab" href="#/leaders/bobo" data-tab="bobo">GRR/STORMIE<span class="lg"> Leaders</span></a>
+  <a class="tab" role="tab" href="#/leaders/sol" data-tab="sol">SOL<span class="lg"> Leaders</span></a>
+  <a class="tab" role="tab" href="#/burns" data-tab="burns">Burn<span class="lg"> Tracker</span></a>
+</div></nav>
 
+<div class="pane" data-pane="rewards">
 <header class="hero"><div class="wrap">
   <img class="logo" src="img/bear.jpg" alt="Bobo the Bear (@bobocouncil avatar)" width="132" height="132">
   <p class="kicker">For the bobros · Bear Council community tool</p>
@@ -85,6 +92,43 @@
       <div class="hcard warn"><h4>4 · Limits, honestly</h4><p>USD values use <b>today's</b> price, not the price at payout time. The “above ~$20 minimum” tag is an estimate from your current balance. Very active wallets are read in chunks of 5,000 transactions (“Scan more” continues). If Helius is unavailable the page falls back to free public RPCs, which only keep about the last 1.5 days, and says so.</p></div>
     </div>
     <p class="muted sm">Sources: <a href="https://pump.fun/docs/fees" target="_blank" rel="noopener">pump.fun fees docs</a> · <a href="https://github.com/pump-fun/pump-public-docs/blob/main/docs/HOLDER_REWARDS_README.md" target="_blank" rel="noopener">pump.fun holder rewards README</a> · <a href="https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump.json" target="_blank" rel="noopener">pump program IDL</a> · <a href="https://x.com/smol_grr/status/2113384843849416767" target="_blank" rel="noopener">@smol_grr on the BoboBurn address</a> · <a href="https://www.bobothebear.io/" target="_blank" rel="noopener">bobothebear.io</a></p>
+  </section>
+</main>
+</div>
+
+<main class="wrap pane hidden" data-pane="bobo">
+  <section class="sec lb">
+    <div class="secHead"><div><h2>Top receivers of BOBO from $GRR and $STORMIE</h2>
+      <p class="muted">$GRR and $STORMIE are BOBO pairs, so their pump.fun holder rewards are paid in <b>BOBO</b>. Wallets ranked by total BOBO received from both coins' reward vaults.</p></div></div>
+    <div class="cards" id="lbBoboCards"></div>
+    <div id="lbBoboNote" class="note"></div>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">From $GRR</th><th class="r">From $STORMIE</th><th class="r">Total BOBO</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Payouts</th></tr></thead><tbody id="lbBoboRows"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody></table></div>
+  </section>
+</main>
+
+<main class="wrap pane hidden" data-pane="sol">
+  <section class="sec lb">
+    <div class="secHead"><div><h2>Top receivers of SOL rewards from $BOBO</h2>
+      <p class="muted">$BOBO trades against SOL, so its pump.fun holder rewards are paid in <b>SOL</b>. Wallets ranked by total SOL received from BOBO's reward vault.</p></div></div>
+    <div class="cards" id="lbSolCards"></div>
+    <div id="lbSolNote" class="note"></div>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">SOL received</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Payouts</th></tr></thead><tbody id="lbSolRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table></div>
+  </section>
+</main>
+
+<main class="wrap pane hidden" data-pane="burns">
+  <section class="sec">
+    <div class="secHead"><div><h2>$BOBO burn tracker</h2>
+      <p class="muted">Every on-chain burn of the BOBO token (SPL <code>Burn</code> / <code>BurnChecked</code> on mint <code>4nV5…pump</code>), plus BOBO parked at the unspendable BoboBurn address.</p></div></div>
+    <div class="cards" id="burnCards"></div>
+    <div id="burnNote" class="note"></div>
+    <h3 class="h3">Biggest burners</h3>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">BOBO burned</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Burns</th><th>Last burn</th></tr></thead><tbody id="burnTopRows"></tbody></table></div>
+    <h3 class="h3">Every burn <span class="muted sm" id="burnCount"></span></h3>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th>Time (ET)</th><th class="r">BOBO burned</th><th class="r">USD <span class="est">today's price</span></th><th>Burner</th><th>Tx</th></tr></thead><tbody id="burnRows"></tbody></table></div>
+    <p><button class="btn ghost sm hidden" id="btnBurnMore" type="button">Show more</button></p>
+    <h3 class="h3">BoboBurn address</h3>
+    <div id="burnAddr" class="hcard"></div>
   </section>
 </main>
 

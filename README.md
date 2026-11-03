@@ -9,6 +9,20 @@ An unofficial community tool. Paste a Solana wallet to see the pump.fun holder r
 - Data comes from an archive RPC (optional, see below), with publicnode and Solana Tracker as free fallbacks, plus Jupiter lite-api (holdings, SOL price) and DexScreener (prices, market cap, logos).
 - Results are cached in the browser. No backend, no wallet connection, no fees.
 
+## Tabs
+- **Rewards**: paste a wallet to see its holder rewards (above).
+- **GRR/STORMIE Leaders** (`#/leaders/bobo`): wallets that received the most BOBO from $GRR and $STORMIE holder rewards.
+- **SOL Leaders** (`#/leaders/sol`): wallets that received the most SOL from $BOBO holder rewards.
+- **Burn Tracker** (`#/burns`): every SPL `Burn`/`BurnChecked` of the BOBO mint, top burners, and the BoboBurn address balance.
+
+The leaderboards and burn tracker read precomputed snapshots (`site/data/leaderboard.json`, `site/data/burns.json`) built with the scripts in `scripts/` (Node 20, no dependencies). They scan the full on-chain history through Helius `getTransactionsForAddress` and cache their progress in `.cache/` (git-ignored), so reruns only fetch new transactions:
+
+```bash
+HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-leaderboard.mjs
+HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=YOUR_KEY" node scripts/build-burns.mjs
+```
+If your key is restricted to a domain, set `HELIUS_ORIGIN` to that origin. The burn script cross-checks its total against the mint's supply change. The pages show the covered time range and when the snapshot was built.
+
 ## Run
 ```bash
 cd site && python3 -m http.server 8765   # then open http://localhost:8765/

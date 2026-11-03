@@ -19,3 +19,5 @@ secrets/
 .DS_Store
 backup-*/
 *.mp4
+# build-script caches (local state)
+.cache/
