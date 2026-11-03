@@ -11,7 +11,9 @@ An unofficial community tool. Paste a Solana wallet to see the pump.fun holder r
 
 ## Tabs
 - **Rewards**: paste a wallet to see its holder rewards (above).
-- **GRR/STORMIE Leaders** (`#/leaders/bobo`): wallets that received the most BOBO from $GRR and $STORMIE holder rewards.
+- **GRR Leaders** (`#/leaders/grr`): wallets ranked by BOBO received from $GRR holder-reward distributions.
+- **STORMIE Leaders** (`#/leaders/stormie`): wallets ranked by BOBO received from $STORMIE holder-reward distributions.
+- The old `#/leaders/bobo` link redirects to GRR Leaders.
 - **SOL Leaders** (`#/leaders/sol`): wallets that received the most SOL from $BOBO holder rewards.
 - **Burn Tracker** (`#/burns`): every SPL `Burn`/`BurnChecked` of the BOBO mint, top burners, and the BoboBurn address balance.
 

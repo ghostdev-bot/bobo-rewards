@@ -36,7 +36,8 @@
 </div></nav>
 <nav class="tabs" aria-label="Sections"><div class="wrap" role="tablist">
   <a class="tab" role="tab" href="#/" data-tab="rewards">Rewards</a>
-  <a class="tab" role="tab" href="#/leaders/bobo" data-tab="bobo">GRR/STORMIE<span class="lg"> Leaders</span></a>
+  <a class="tab" role="tab" href="#/leaders/grr" data-tab="grr">GRR<span class="lg"> Leaders</span></a>
+  <a class="tab" role="tab" href="#/leaders/stormie" data-tab="stormie">STORMIE<span class="lg"> Leaders</span></a>
   <a class="tab" role="tab" href="#/leaders/sol" data-tab="sol">SOL<span class="lg"> Leaders</span></a>
   <a class="tab" role="tab" href="#/burns" data-tab="burns">Burn<span class="lg"> Tracker</span></a>
 </div></nav>
@@ -96,13 +97,23 @@
 </main>
 </div>
 
-<main class="wrap pane hidden" data-pane="bobo">
+<main class="wrap pane hidden" data-pane="grr">
   <section class="sec lb">
-    <div class="secHead"><div><h2>Top receivers of BOBO from $GRR and $STORMIE</h2>
-      <p class="muted">$GRR and $STORMIE are BOBO pairs, so their pump.fun holder rewards are paid in <b>BOBO</b>. Wallets ranked by total BOBO received from both coins' reward vaults.</p></div></div>
-    <div class="cards" id="lbBoboCards"></div>
-    <div id="lbBoboNote" class="note"></div>
-    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">From $GRR</th><th class="r">From $STORMIE</th><th class="r">Total BOBO</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Payouts</th></tr></thead><tbody id="lbBoboRows"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody></table></div>
+    <div class="secHead"><div><h2>Top receivers of BOBO from $GRR</h2>
+      <p class="muted">$GRR is a BOBO pair, so its pump.fun holder rewards are paid in <b>BOBO</b>. Wallets ranked by BOBO received from the $GRR reward vault only. See also <a href="#/leaders/stormie">STORMIE leaders</a>.</p></div></div>
+    <div class="cards" id="lbGRRCards"></div>
+    <div id="lbGRRNote" class="note"></div>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">BOBO received</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Payouts</th></tr></thead><tbody id="lbGRRRows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table></div>
+  </section>
+</main>
+
+<main class="wrap pane hidden" data-pane="stormie">
+  <section class="sec lb">
+    <div class="secHead"><div><h2>Top receivers of BOBO from $STORMIE</h2>
+      <p class="muted">$STORMIE is a BOBO pair, so its pump.fun holder rewards are paid in <b>BOBO</b>. Wallets ranked by BOBO received from the $STORMIE reward vault only. See also <a href="#/leaders/grr">GRR leaders</a>.</p></div></div>
+    <div class="cards" id="lbSTORMIECards"></div>
+    <div id="lbSTORMIENote" class="note"></div>
+    <div class="tblWrap"><table class="tbl"><thead><tr><th class="r">#</th><th>Wallet</th><th class="r">BOBO received</th><th class="r">USD <span class="est">today's price</span></th><th class="r">Payouts</th></tr></thead><tbody id="lbSTORMIERows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table></div>
   </section>
 </main>
 

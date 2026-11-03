@@ -785,15 +785,20 @@ async function loadData(name) {
 function coverNote(b, gen) {
   return `Covers <b>every</b> holder-reward payout (${b.distTxs.toLocaleString()} distribution transactions) from <b>${esc(fmtET(b.from))}</b> (first payout) to <b>${esc(fmtET(b.to))}</b>. Snapshot built ${esc(fmtET(gen))} (${esc(ago(gen))}); payouts after that are not included yet. Amount = the wallet's SOL/BOBO balance increase in each distribution transaction. USD uses today's price, not the price at payout time.`;
 }
-async function renderLbBobo() {
-  let d; try { d = await loadData('leaderboard'); } catch { $('#lbBoboRows').innerHTML = '<tr><td colspan="7" class="muted">Could not load the leaderboard data.</td></tr>'; return; }
-  const b = d.bobo, px = priceOf(BOBO), pc = b.perCoin;
-  $('#lbBoboCards').innerHTML = card('BOBO paid out', `${fmtNum(b.totalPaid, 0)} BOBO`, px ? fmtUsd(b.totalPaid * px) + ' today' : '', true)
-    + card('From $GRR', `${fmtNum(pc.GRR?.total, 0)} BOBO`, `${(pc.GRR?.distTxs || 0).toLocaleString()} payout txs`)
-    + card('From $STORMIE', `${fmtNum(pc.STORMIE?.total, 0)} BOBO`, `${(pc.STORMIE?.distTxs || 0).toLocaleString()} payout txs`)
-    + card('Wallets paid', b.wallets.toLocaleString(), `since ${esc(fmtDay(b.from))}`);
-  $('#lbBoboNote').innerHTML = coverNote(b, d.generatedAt) + ' The BoboBurn address holds 20% of GRR, so it receives GRR rewards like any holder.';
-  $('#lbBoboRows').innerHTML = b.top.map((r, i) => `<tr><td class="r">${rankCell(i)}</td><td class="w">${walletCell(r.w)}</td><td class="r">${r.grr ? fmtNum(r.grr, 0) : '—'}</td><td class="r">${r.stormie ? fmtNum(r.stormie, 0) : '—'}</td><td class="r"><b>${fmtNum(r.bobo, 0)}</b></td><td class="r">${px ? fmtUsd(r.bobo * px) : '—'}</td><td class="r">${r.n.toLocaleString()}</td></tr>`).join('');
+function renderCoinBoard(key) {
+  return async () => {
+    const C = key.toUpperCase();
+    let d; try { d = await loadData('leaderboard'); } catch { $(`#lb${C}Rows`).innerHTML = '<tr><td colspan="5" class="muted">Could not load the leaderboard data.</td></tr>'; return; }
+    const b = d[key], px = priceOf(BOBO);
+    if (!b) { $(`#lb${C}Rows`).innerHTML = '<tr><td colspan="5" class="muted">No data yet.</td></tr>'; return; }
+    $(`#lb${C}Cards`).innerHTML = card('BOBO paid out', `${fmtNum(b.totalPaid, 0)} BOBO`, px ? fmtUsd(b.totalPaid * px) + ' today' : '', true)
+      + card('Wallets paid', b.wallets.toLocaleString(), `by the $${esc(C)} reward vault`)
+      + card('Distributions scanned', b.distTxs.toLocaleString(), 'payout transactions')
+      + card('Time range', esc(fmtDay(b.from)), `to ${esc(fmtDay(b.to))}`);
+    $(`#lb${C}Note`).innerHTML = coverNote(b, d.generatedAt) + ` Reward vault: <a class="mono" href="https://solscan.io/account/${esc(b.vault)}" target="_blank" rel="noopener">${esc(short(b.vault))}</a>.`
+      + (key === 'grr' ? ' The BoboBurn address holds 20% of GRR, so it receives GRR rewards like any holder.' : '');
+    $(`#lb${C}Rows`).innerHTML = b.top.map((r, i) => `<tr><td class="r">${rankCell(i)}</td><td class="w">${walletCell(r.w)}</td><td class="r"><b>${fmtNum(r.bobo, 0)}</b></td><td class="r">${px ? fmtUsd(r.bobo * px) : '—'}</td><td class="r">${r.n.toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No payouts found.</td></tr>';
+  };
 }
 async function renderLbSol() {
   let d; try { d = await loadData('leaderboard'); } catch { $('#lbSolRows').innerHTML = '<tr><td colspan="5" class="muted">Could not load the leaderboard data.</td></tr>'; return; }
@@ -840,11 +845,12 @@ async function renderBurns() {
 }
 $('#btnBurnMore').addEventListener('click', () => { burnShown += 200; renderBurns(); });
 
-const PANES = { rewards: null, bobo: renderLbBobo, sol: renderLbSol, burns: renderBurns };
+const PANES = { rewards: null, grr: renderCoinBoard('grr'), stormie: renderCoinBoard('stormie'), sol: renderLbSol, burns: renderBurns };
 let curPane = null, lastWallet = null;
 function route() {
+  if (location.hash === '#/leaders/bobo') history.replaceState(null, '', '#/leaders/grr'); // old combined tab
   const h = location.hash || '#/';
-  const pane = h === '#/leaders/bobo' ? 'bobo' : h === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
+  const pane = h === '#/leaders/grr' ? 'grr' : h === '#/leaders/stormie' ? 'stormie' : h === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
   document.querySelectorAll('[data-pane]').forEach(el => el.classList.toggle('hidden', el.dataset.pane !== pane));
   document.querySelectorAll('.tab').forEach(el => { const on = el.dataset.tab === pane; el.classList.toggle('on', on); el.setAttribute('aria-selected', on); if (on && el.scrollIntoView && el.parentNode.scrollWidth > el.parentNode.clientWidth) el.parentNode.scrollLeft = Math.max(0, el.offsetLeft - 14); });
   const changed = curPane !== pane; curPane = pane;

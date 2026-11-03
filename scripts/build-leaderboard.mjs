@@ -26,7 +26,9 @@ const EXCLUDE = new Set(VAULTS.map(v => v.vault));
 const NATIVE = '11111111111111111111111111111111'; // events report SOL as the default pubkey
 
 const full = process.argv.includes('--full');
-const st = (!full && readJson(STATE, null)) || { v: 1, vaults: {}, sol: {}, bobo: {}, multi: [], check: { sol: [0, 0, 0], bobo: [0, 0, 0] } };
+let st0 = !full && readJson(STATE, null);
+if (st0 && Object.values(st0.bobo || {}).some(r => r.length < 5)) { console.error('state lacks per-coin counts; rebuilding'); st0 = null; }
+const st = st0 || { v: 1, vaults: {}, sol: {}, bobo: {}, multi: [], check: { sol: [0, 0, 0], bobo: [0, 0, 0] } };
 const multiSeen = new Set(st.multi);
 const add = (a, b) => (BigInt(a || 0) + b).toString();
 
@@ -56,11 +58,11 @@ function processTx(tx, vaultMint) {
     for (const [w, d] of gains) {
       if (quote === SOL) { const r = st.sol[w] ||= ['0', 0]; r[0] = add(r[0], d); r[1]++; }
       else {
-        const r = st.bobo[w] ||= ['0', '0', 0];
+        const r = st.bobo[w] ||= ['0', '0', 0, 0, 0];
         // split by each coin's share of the tx's event totals (normally one coin per tx)
         let left = d;
         es.forEach((e, i) => { const part = i === es.length - 1 ? left : d * e.total / (evTotal || 1n); left -= part; if (e.mint === GRR) r[0] = add(r[0], part); else r[1] = add(r[1], part); });
-        r[2]++;
+        r[2]++; if (es.some(e => e.mint === GRR)) r[3]++; if (es.some(e => e.mint === STORMIE)) r[4]++;
       }
     }
   }
@@ -85,7 +87,15 @@ for (const v of VAULTS) {
 
 const ui = (raw, dec) => Number(BigInt(raw)) / 10 ** dec;
 const solRows = Object.entries(st.sol).map(([w, [r, n]]) => ({ w, sol: ui(r, 9), n })).sort((a, b) => b.sol - a.sol);
-const boboRows = Object.entries(st.bobo).map(([w, [g, s, n]]) => ({ w, grr: ui(g, 6), stormie: ui(s, 6), bobo: ui(g, 6) + ui(s, 6), n })).sort((a, b) => b.bobo - a.bobo);
+const boboRows = Object.entries(st.bobo).map(([w, [g, s, n, ng, ns]]) => ({ w, grr: ui(g, 6), stormie: ui(s, 6), bobo: ui(g, 6) + ui(s, 6), n, ng, ns })).sort((a, b) => b.bobo - a.bobo);
+// Per-coin boards (separate GRR / STORMIE tabs): ranked by BOBO received from that coin's distributions only.
+const coinBoard = (mint, key, nk) => {
+  const rows = boboRows.filter(r => r[key] > 0).sort((a, b) => b[key] - a[key]);
+  const v = st.vaults[mint];
+  return { coin: BY_MINT[mint].sym, mint, vault: BY_MINT[mint].vault, quote: 'BOBO', distTxs: v.dist, from: v.first, to: v.last,
+    eventTotal: ui(v.total, 6), wallets: rows.length, totalPaid: r6(rows.reduce((s, r) => s + r[key], 0)),
+    top: rows.slice(0, TOP).map(r => ({ w: r.w, bobo: r6(r[key]), n: r[nk] })) };
+};
 const meta = mints => {
   const vs = mints.map(m => st.vaults[m]);
   return { coins: mints.map(m => BY_MINT[m].sym), distTxs: vs.reduce((s, v) => s + v.dist, 0), from: Math.min(...vs.map(v => v.first ?? Infinity)), to: Math.max(...vs.map(v => v.last ?? 0)),
@@ -99,6 +109,8 @@ const out = {
     top: solRows.slice(0, TOP).map(r => ({ w: r.w, sol: Math.round(r.sol * 1e9) / 1e9, n: r.n })) },
   bobo: { ...meta([GRR, STORMIE]), quote: 'BOBO', wallets: boboRows.length, totalPaid: r6(boboRows.reduce((s, r) => s + r.bobo, 0)), check: st.check.bobo,
     top: boboRows.slice(0, TOP).map(r => ({ w: r.w, bobo: r6(r.bobo), grr: r6(r.grr), stormie: r6(r.stormie), n: r.n })) },
+  grr: coinBoard(GRR, 'grr', 'ng'),
+  stormie: coinBoard(STORMIE, 'stormie', 'ns'),
 };
 writeJson(OUT, out);
-console.log(JSON.stringify({ generatedAt: out.generatedAt, sol: { distTxs: out.sol.distTxs, wallets: out.sol.wallets, check: out.sol.check, top3: out.sol.top.slice(0, 3) }, bobo: { distTxs: out.bobo.distTxs, wallets: out.bobo.wallets, check: out.bobo.check, top3: out.bobo.top.slice(0, 3) }, credits }));
+console.log(JSON.stringify({ generatedAt: out.generatedAt, sol: { distTxs: out.sol.distTxs, wallets: out.sol.wallets, check: out.sol.check, top3: out.sol.top.slice(0, 3) }, bobo: { distTxs: out.bobo.distTxs, wallets: out.bobo.wallets, check: out.bobo.check }, grr: { ...out.grr, top: out.grr.top.slice(0, 3) }, stormie: { ...out.stormie, top: out.stormie.top.slice(0, 3) }, credits }));

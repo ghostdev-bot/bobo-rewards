@@ -111,7 +111,8 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .medal.g1{background:#b88a1b}.medal.g2{background:#8a8f99}.medal.g3{background:#8a5a2b}
 #burnAddr p{margin:0 0 6px}
 @media (max-width:640px){.tab{padding:11px 10px;font-size:13px}[id]{scroll-margin-top:110px}}
-@media (max-width:640px){.tabs .lg{display:none}.tab{padding:11px 12px}}
+@media (max-width:640px){.tabs .lg{display:none}.tab{padding:11px 10px}}
+@media (max-width:380px){.tab{padding:11px 7px;font-size:12.5px}}
 @media (max-width:640px){.tbl a.x{display:none}}
 /* locked supply */
 .lockTbl .lbl{margin-left:0}
