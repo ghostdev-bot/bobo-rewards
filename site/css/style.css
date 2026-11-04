@@ -152,3 +152,32 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 @media (max-width:860px){.fcGrid{grid-template-columns:1fr}}
 @media (max-width:640px){.fcCards{grid-template-columns:1fr 1fr}.fcCards .card .v{font-size:17px}.fcHold .btn{width:auto}.chip{padding:6px 10px}}
 .fcIn .btn.link.sm,.chip,.seg button{font-family:inherit}
+/* Race to listing */
+.tgt{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;background:#8f0a22;border-radius:6px;padding:0 6px;line-height:17px;margin-left:4px;vertical-align:1px}
+.tgt.big{font-size:13px;line-height:20px;padding:0 8px;vertical-align:3px}
+.raceStatus{margin:12px 0 8px}
+.live{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--up)}.live i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px rgba(62,207,142,.18);animation:lp 1.6s infinite}
+.live.warn{color:#f0b429}.live.off{color:var(--mut)}.live.off i{animation:none}
+@keyframes lp{50%{opacity:.35}}
+.raceTools{margin:0 0 10px}.raceTools input{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 12px;font-size:14px}
+.raceTools input:focus{outline:2px solid var(--honey);border-color:transparent}
+.raceTbl .rprog{min-width:220px;width:34%}.raceTbl .rtok .rbar,.raceTbl .rtok .rmc{display:none}
+.rbar{height:10px;background:#2a1418;border-radius:99px;overflow:hidden}.rbar i{display:block;height:100%;background:linear-gradient(90deg,#b90c2a,#ff3b55);border-radius:99px;transition:width .6s ease}
+.rbar.done i{background:linear-gradient(90deg,#1f9d63,#3ecf8e)}
+.rmc{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:4px}
+.rn{display:flex;flex-direction:column;line-height:1.25}.rn small{color:var(--mut);font-size:11.5px;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.rimg{width:26px;height:26px;border-radius:50%;object-fit:cover;background:#2a1216;flex:none}
+.rimg.big,.ava.big{width:56px;height:56px;font-size:22px}
+.gbadge{display:inline-block;font-size:10.5px;font-weight:800;color:#0b2a1b;background:#3ecf8e;border-radius:6px;padding:0 6px;line-height:17px;vertical-align:1px}a.gbadge:hover{text-decoration:none;filter:brightness(1.1)}
+.sec h2 .gbadge{font-size:12px;line-height:20px;vertical-align:4px}
+.nbadge{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:#b90c2a;border-radius:6px;padding:0 5px;line-height:16px;text-transform:uppercase}
+.tbl tr.grad td{background:#0d1d15}
+.up{color:var(--up)}.down{color:var(--down)}
+.ghead{display:flex;align-items:center;gap:14px}
+.card .v.sm2{font-size:17px}
+.gchart{margin:14px 0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel);height:460px}.gchart iframe{width:100%;height:100%;border:0;display:block}
+.glinks{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 0 4px;font-weight:600}
+.gaddr code{font-size:11.5px}
+.gh3{margin:22px 0 10px;font-size:17px}
+.gtab{color:#8fe3b9}
+@media (max-width:640px){.raceTbl .rprog{display:none}.raceTbl .rtok{min-width:200px}.raceTbl .rtok .rbar{display:block;margin-top:7px}.raceTbl .rtok .rmc{display:flex}.raceTbl th:first-child,.raceTbl td:first-child{padding-right:2px;padding-left:8px}.gchart{height:380px}.rtab .tgt{display:none}.ghead .rimg.big,.ghead .ava.big{width:44px;height:44px}}

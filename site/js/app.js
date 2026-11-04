@@ -1010,11 +1010,12 @@ function route() {
   if (location.hash === '#/leaders/bobo') history.replaceState(null, '', '#/leaders/grr'); // old combined tab
   const h = location.hash || '#/';
   const hb = h.replace(/\/forecast$/, '');
-  const pane = hb === '#/leaders/grr' ? 'grr' : hb === '#/leaders/stormie' ? 'stormie' : hb === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
+  const ext = window.BR_EXT ? window.BR_EXT.route(h) : null; // Race to listing + graduated pair tabs (js/race.js)
+  const pane = ext ? ext : hb === '#/leaders/grr' ? 'grr' : hb === '#/leaders/stormie' ? 'stormie' : hb === '#/leaders/sol' ? 'sol' : (h === '#/burns' || h === '#/burns/locked') ? 'burns' : 'rewards';
   document.querySelectorAll('[data-pane]').forEach(el => el.classList.toggle('hidden', el.dataset.pane !== pane));
   document.querySelectorAll('.tab').forEach(el => { const on = el.dataset.tab === pane; el.classList.toggle('on', on); el.setAttribute('aria-selected', on); if (on && el.scrollIntoView && el.parentNode.scrollWidth > el.parentNode.clientWidth) el.parentNode.scrollLeft = Math.max(0, el.offsetLeft - 14); });
   const changed = curPane !== pane; curPane = pane;
-  if (PANES[pane]) PANES[pane]();
+  if (PANES[pane]) PANES[pane](); else if (ext) window.BR_EXT.render(pane);
   if (pane === 'rewards') {
     const m = /^#\/w\/([1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(h);
     if (m && m[1] !== lastWallet) { lastWallet = m[1]; $('#addr').value = m[1]; go(m[1]); return; }

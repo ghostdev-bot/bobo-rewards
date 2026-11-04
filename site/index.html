@@ -6,7 +6,7 @@
 <style id="fb-guard">html{display:none!important}</style>
 <script>(function(){if(window.top===window.self){var s=document.getElementById('fb-guard');if(s)s.parentNode.removeChild(s);}else{try{window.top.location.replace(window.self.location.href);}catch(e){}}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-3GYFfuM4uNQJC1fBuC8xbfCH443JGAB1oef5UAP/4WE=' 'sha256-BWr4Dagc80GswU4DnNKqicEp8YjVarYvwQb9MMryLgk='; style-src 'self' 'sha256-Gu7H6yQeElEGEhtaJWUnU8wJfuZQiNi6YYLWWZK0PUM='; img-src 'self' https: data: https://ghostdev.goatcounter.com; connect-src 'self' https: https://ghostdev.goatcounter.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-3GYFfuM4uNQJC1fBuC8xbfCH443JGAB1oef5UAP/4WE=' 'sha256-BWr4Dagc80GswU4DnNKqicEp8YjVarYvwQb9MMryLgk='; style-src 'self' 'sha256-Gu7H6yQeElEGEhtaJWUnU8wJfuZQiNi6YYLWWZK0PUM='; img-src 'self' https: data: https://ghostdev.goatcounter.com; connect-src 'self' https: https://ghostdev.goatcounter.com; frame-src https://dexscreener.com; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Bobo Rewards · holder rewards tracker for $BOBO and its pairs (unofficial)</title>
 <meta name="description" content="Unofficial community tool: paste a Solana wallet and see the pump.fun holder rewards it received from $BOBO (paid in SOL) and BOBO pairs like $GRR and $STORMIE (paid in BOBO), straight from on-chain data.">
 <meta property="og:title" content="Bobo Rewards (unofficial)">
@@ -40,6 +40,7 @@
   <a class="tab" role="tab" href="#/leaders/stormie" data-tab="stormie">STORMIE<span class="lg"> Leaders</span></a>
   <a class="tab" role="tab" href="#/leaders/sol" data-tab="sol">SOL<span class="lg"> Leaders</span></a>
   <a class="tab" role="tab" href="#/burns" data-tab="burns">Burn<span class="lg"> Tracker</span></a>
+  <a class="tab rtab" role="tab" href="#/race" data-tab="race">🏁 Race to listing <span class="tgt">$50K MC</span></a>
 </div></nav>
 
 <div class="pane" data-pane="rewards">
@@ -153,6 +154,19 @@
   </section>
 </main>
 
+<main class="wrap pane hidden" data-pane="race">
+  <section class="sec" id="raceRoot">
+    <div class="secHead"><div><h2>Race to listing <span class="tgt big">$50K MC</span></h2>
+      <p class="muted">Every token paired with <b>BOBO</b> (pump.fun coins launched against BOBO instead of SOL, like $GRR and $STORMIE), ranked by how close its market cap is to <b>$50K</b>. When a pair hits $50K it gets its own tab here. Market caps update live.</p></div></div>
+    <div class="cards" id="raceCards"></div>
+    <p class="muted sm raceStatus" id="raceStatus">Loading…</p>
+    <div class="raceTools"><input id="raceQ" type="search" placeholder="Filter by ticker, name or mint" aria-label="Filter pairs" autocomplete="off"></div>
+    <div class="tblWrap"><table class="tbl raceTbl"><thead><tr><th class="r">#</th><th>Token</th><th class="rprog">Progress to $50K</th><th class="r">Price</th><th class="r">24h vol</th><th class="r">Liquidity</th><th class="r">24h</th><th>Chart</th></tr></thead><tbody id="raceRows"><tr><td colspan="8" class="muted">Loading…</td></tr></tbody></table></div>
+    <div class="row2"><button class="btn sm" type="button" id="raceMore">Show all pairs</button></div>
+    <p class="muted sm">How it works: BOBO pairs are found on-chain (pump.fun bonding curves and PumpSwap pools whose quote coin is BOBO) plus any other DexScreener pool quoted in BOBO; the list is refreshed every 6 hours and new curves are picked up live. Market cap = price × total supply (1B for pump.fun coins). On the bonding curve the price is read straight from the curve and converted with BOBO's live DexScreener price; DEX-listed pairs use DexScreener. "curve %" is how much of the curve has sold. 24h volume isn't published for BOBO-quoted curves (—); a <sup>*</sup> change is measured against our own snapshot from about 24h earlier. A pair that is seen at or above $50K is recorded and keeps its tab even if it dips later. Not financial advice.</p>
+  </section>
+</main>
+
 <dialog id="dlg">
   <form method="dialog" class="dlgIn">
     <h3>Data settings</h3>
@@ -173,6 +187,7 @@
 <div id="iosHint" class="iosHint hidden" role="note">Install BOBO Rewards: tap <b>Share</b> then <b>Add to Home Screen</b>.<button type="button" id="iosClose" aria-label="Dismiss">×</button></div>
 <script src="js/config.js"></script>
 <script src="js/pwa.js"></script>
+<script src="js/race.js"></script>
 <script src="js/app.js" type="module"></script>
 <script>window.goatcounter={path:function(p){return location.host+p}}</script>
 <script data-goatcounter="https://ghostdev.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>

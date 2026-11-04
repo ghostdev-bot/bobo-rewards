@@ -1,8 +1,8 @@
 /* BOBO Rewards service worker: caches ONLY this site's own static files.
    Never touches RPC/API traffic: every cross-origin request (Solana RPC, Jupiter,
    token images) and every non-GET request bypasses the worker entirely. */
-var VERSION = 'bobo-shell-20261103-forecast';
-var SHELL = ["/", "/assets/mark.svg", "/css/style.css", "/data/burns.json", "/data/forecast.json", "/data/leaderboard.json", "/data/vaults.json", "/favicon.ico", "/img/banner.jpg", "/img/bear.jpg", "/img/icons/apple-touch-icon.png", "/img/icons/favicon-32.png", "/img/icons/icon-192.png", "/img/icons/icon-512.png", "/img/icons/maskable-192.png", "/img/icons/maskable-512.png", "/js/app.js", "/js/config.js", "/js/pwa.js", "/manifest.webmanifest"];
+var VERSION = 'bobo-shell-20261103-race';
+var SHELL = ["/", "/assets/mark.svg", "/css/style.css", "/data/burns.json", "/data/forecast.json", "/data/leaderboard.json", "/data/race.json", "/data/race-graduated.json", "/data/vaults.json", "/favicon.ico", "/img/banner.jpg", "/img/bear.jpg", "/img/icons/apple-touch-icon.png", "/img/icons/favicon-32.png", "/img/icons/icon-192.png", "/img/icons/icon-512.png", "/img/icons/maskable-192.png", "/img/icons/maskable-512.png", "/js/app.js", "/js/config.js", "/js/pwa.js", "/js/race.js", "/manifest.webmanifest"];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
 });
